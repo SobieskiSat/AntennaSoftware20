@@ -1,0 +1,14 @@
+#ifndef ROTOR_DEFINITIONS_H
+#define ROTOR_DEFINITIONS_H
+
+#define STEPPERV_DIR_PIN 8
+#define STEPPERV_STEP_PIN 6
+#define STEPPERV_ENABLE_PIN 4
+
+#define STEPPERH_DIR_PIN 2
+#define STEPPERH_STEP_PIN 0
+#define STEPPERH_ENABLE_PIN 1
+
+#define microStepRate 8
+
+#endif

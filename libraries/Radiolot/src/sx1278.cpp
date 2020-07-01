@@ -93,11 +93,11 @@ bool SX1278_init(SX1278* inst)
 {
 	pinMode(LR_DIO0_Pin, INPUT);
 	pinMode(LR_NSS_Pin, OUTPUT);
-		
+
 	inst->dio0 = LR_DIO0_Pin;
 	inst->nss = LR_NSS_Pin;
 
-	
+
 	SX1278_reset(inst);
 
 	//unable to establish the connection with module
