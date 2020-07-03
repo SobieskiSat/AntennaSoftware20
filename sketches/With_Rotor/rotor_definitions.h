@@ -1,3 +1,5 @@
+//States pins for stepper controls
+
 #ifndef ROTOR_DEFINITIONS_H
 #define ROTOR_DEFINITIONS_H
 

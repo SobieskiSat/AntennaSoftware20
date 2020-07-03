@@ -59,13 +59,13 @@ void setup()
   SX1278_init(&radio); */
 
   // Setup transmitted variables
-  angle = 0;
-  servo = 0;
-  motors = 0;
+  //angle = 0;
+  //servo = 0;
+  //motors = 0;
 
   //Setup transmitted rotor variables
-  verticalAngle = 0;
-  horizontalAngle = 0;
+int  verticalAngle = 0;
+int  horizontalAngle = 0;
 }
 
 void loop()

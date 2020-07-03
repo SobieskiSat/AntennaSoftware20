@@ -13,7 +13,12 @@ uint8_t incoming_count = 5; // Count of incoming packets in duplex, (eg. 5 recei
                             // satellite sends this number of packets and then listens for packet which has to be sent from antenna
 
 String fragment;      // Used in parsing PC Serial messages, contains values in Strings
-String serial_packet; // Serial messages buffer (from PC)
+String serialUSB_packet; // Serial messages buffer (from PC)
+String serial_packet;    // Serial messages buffer (from rotor remote)
+bool readingUSB_packet = false; //indicators for receiving serial commands from PC and rotor remote
+bool reading_packet = false;    //true if the packet is not fully received yet
+                                //false if the opening '<' character was not received yet
+
 uint8_t toSend[2];    // Buffer to be sent via radio
 
 // Transmitted variables (recieved via Serial)
@@ -24,9 +29,6 @@ float angle;          // angle in degrees [second byte of transmitted package]
 // Transmitted variables (recieved via Serial) (for antenna rotor)
 float horizontalAngle; //relative angle for the rotor to rotate in a given plane
 float verticalAngle;   //applied for primitive manual steering
-
-//int rotorVerticalTarget = 0;    //holds absolute positions for rotor movements
-//int rotorHorizontalTarget = 0;
 
 // Received variables
 float pressure;
@@ -49,8 +51,10 @@ void setup()
 
   // Setup arduino
   SerialUSB.begin(115200);
+  Serial.begin(115200);
   //SPI.begin();
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
   delay(1000);
 
   // Setup radio
@@ -114,10 +118,29 @@ void loop()
 void getSerial()
 {
   char incoming;
-  bool reading_packet = false;
   while (SerialUSB.available() > 0)                         // If there are bytes waiting to be read from Serial
   {
     incoming = SerialUSB.read();                            // Get one character
+    if (readingUSB_packet) serialUSB_packet += incoming;          // Append character to packet
+
+    if (incoming == '<')                                    // '<' character opens the packet
+    {
+      readingUSB_packet = true;                                // We want now to save characters
+      serialUSB_packet = "";
+      serialUSB_packet += incoming;
+    }
+    else if (incoming == '>') {
+      readingUSB_packet = false;       // '>' character ends the packet
+      parseSerial(serialUSB_packet);
+    }
+  }
+
+  //parseSerial();
+
+  while (Serial.available() > 0)                            // If there are bytes waiting to be read from Serial
+  {
+    digitalWrite(LED_BUILTIN, HIGH);
+    incoming = Serial.read();                               // Get one character
     if (reading_packet) serial_packet += incoming;          // Append character to packet
 
     if (incoming == '<')                                    // '<' character opens the packet
@@ -126,45 +149,55 @@ void getSerial()
       serial_packet = "";
       serial_packet += incoming;
     }
-    else if (incoming == '>') reading_packet = false;       // '>' character ends the packet
+    else if (incoming == '>') {
+      reading_packet = false;         // '>' character ends the packet
+      parseSerial(serial_packet);     //parses serial data immidiately when one packet is received
+      //digitalWrite(LED_BUILTIN, LOW);
+    }
+    digitalWrite(LED_BUILTIN, led_state); led_state = !led_state;
+    //SerialUSB.println(incoming);
+    //SerialUSB.println(":inc pac:");
+    //SerialUSB.println(serial_packet);
   }
 
-  parseSerial();
+  //parseSerial();                    //parsing data here might overall take longer than in while loop
 }
 
-void parseSerial()  // Parses Serial message, eg. "s1Sm0M" -> servo = 1, motors = 0
+// Parses Serial message, eg. "s1Sm0M" -> servo = 1, motors = 0
+// takes an argument stating which string should be parsed
+void parseSerial(String serial_packet_choice)
 {
-  fragment = cutFragment('s', 'S');
+  fragment = cutFragment('s', 'S', serial_packet_choice);
   if (fragment != "bad") servo = (uint8_t)fragment.toInt();
   //SerialUSB.println("Servo: " + String(servo));
 
-  fragment = cutFragment('m', 'M');
+  fragment = cutFragment('m', 'M', serial_packet_choice);
   if (fragment != "bad") motors = (uint8_t)fragment.toInt() * 2;
   //SerialUSB.println("Motors: " + String(servo));
 
-  fragment = cutFragment('a', 'A');
+  fragment = cutFragment('a', 'A', serial_packet_choice);
   if (fragment != "bad") angle = fragment.toFloat();
   //SerialUSB.println("Angle: " + String(servo));
 
-  fragment = cutFragment('v', 'V');
+  fragment = cutFragment('v', 'V', serial_packet_choice);
   if (fragment != "bad") {
     verticalAngle = fragment.toFloat();
     stepperV.move(angleToSteps(verticalAngle));
   //SerialUSB.println("Rotor V: " + String(verticalAngle));
   }
 
-  fragment = cutFragment('h', 'H');
+  fragment = cutFragment('h', 'H', serial_packet_choice);
   if (fragment != "bad") {
      horizontalAngle = fragment.toFloat();
      stepperH.move(angleToSteps(horizontalAngle));
      //horizontalAngle = 0;
      //SerialUSB.println("Rotor H: " + String(verticalAngle));
   }
-  serial_packet = "";
+  //serial_packet = "";
   fragment = "";
 }
 
-String cutFragment(char openChar, char closeChar)   // Cuts out variable strings from Serial message, eg. for args 'a', 'A': "<s1Sm0Ma230A>" -> "230"
+String cutFragment(char openChar, char closeChar, String serial_packet)   // Cuts out variable strings from Serial message, eg. for args 'a', 'A': "<s1Sm0Ma230A>" -> "230"
 {
   if (serial_packet.indexOf('<') >= 0 && serial_packet.indexOf('>') >= 0 &&           // Validate packet (should contain bounding characters '<' '>')
       serial_packet.indexOf(openChar) >= 0 && serial_packet.indexOf(closeChar) >= 0)  // Validate requested fragment (check for both bounding letters of variable)
