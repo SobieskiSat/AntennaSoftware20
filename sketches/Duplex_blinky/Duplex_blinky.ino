@@ -28,6 +28,8 @@ float pitch;
 float roll;
 uint8_t packetNumber;
 
+uint32_t lastBlink;
+
 void setup()
 {
   // Setup arduino
@@ -48,10 +50,16 @@ void setup()
   motors = 0;
   packetNumber = 0;
   transmitting = false;
+  lastBlink = millis();
 }
 
 void loop()
 {
+  if (millis() - lastBlink >= 100)
+  {
+    digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
+  }
+
   if (radio.useDio0IRQ)
   {
     if (check_LoRa_INT())                                   // Manually check for interrupt
