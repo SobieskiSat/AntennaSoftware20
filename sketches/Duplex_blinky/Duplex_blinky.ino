@@ -58,6 +58,7 @@ void loop()
   if (millis() - lastBlink >= 100)
   {
     digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
+    lastBlink = millis();
   }
 
   if (radio.useDio0IRQ)
@@ -67,7 +68,7 @@ void loop()
       SX1278_dio0_IRQ(&radio);                              // Finish packet reception/transmission routine
       digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
 
-      if (!transmitting)                                    // Prints data to PC but only when wans't transmitting during previous routine
+      if (!transmitting && radio.rxDone)                    // Prints data to PC but only when wans't transmitting during previous routine
       {
         decodePacket();                                     // Updates received variables from packet
         SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
@@ -78,6 +79,7 @@ void loop()
                           "Ab" + String(pitch, 1) +
                           "Bc" + String(roll, 1) +
                           "Cr" + String(radio.rssi) + "R");
+        radio.rxDone = false;
       }
       else { ; } // (Maybe to implement) Sends transmitted data to PC
       transmitting = false;
@@ -91,6 +93,7 @@ void loop()
         toSend[1] = (uint8_t)(angle * (255.0 / 360.0));       // Convert float to byte and place it as 2nd byte
         delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while 
         SX1278_transmit(&radio, toSend, 2);                   // Transmit packet
+        packetNumber = 0;
       }
       else
       {
