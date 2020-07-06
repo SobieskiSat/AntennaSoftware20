@@ -52,15 +52,15 @@ void setup()
   // Setup arduino
   SerialUSB.begin(115200);
   Serial.begin(115200);
-  //SPI.begin();
+  SPI.begin();
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(1000);
 
   // Setup radio
-  /*radio.config = sx1278_default_config;
+  radio.config = sx1278_default_config;
   radio.useDio0IRQ = false;
-  SX1278_init(&radio); */
+  SX1278_init(&radio);
 
   // Setup transmitted variables
   angle = 0;
@@ -77,7 +77,7 @@ void loop()
   stepperV.run();                                     //tries to make a vertical / horizontal step
   stepperH.run();                                     //these have to be called as often as possible
 
-  /*SX1278_receive(&radio);                             // Start listening for packet (waits until received)
+  SX1278_receive(&radio);                             // Start listening for packet (waits until received)
   decodePacket();                                     // Updates received variables from packet
   SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
                     "Pt" + String(temperature, 1) +   // format is like: x012345X
@@ -87,7 +87,7 @@ void loop()
                     "Ab" + String(pitch, 1) +
                     "Bc" + String(roll, 1) +
                     "Cr" + String(radio.rssi) + "R");
-                    */
+                    
 
   digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
 
@@ -96,7 +96,7 @@ void loop()
 
   getSerial();
 
-  /*if (radio.rxDone)                                         // If received packet is OK
+  if (radio.rxDone)                                         // If received packet is OK
   {
     if (radio.rxBuffer[radio.rxLen - 1] == incoming_count)  // If packet number (last byte of packet) is equal to count of incoming packets
     {                                                       // send packet then (satellite will listen for a while)
@@ -112,7 +112,7 @@ void loop()
     }
 
     radio.rxDone = false;                                   // Remove packet received flag
-  } */
+  } 
 }
 
 void getSerial()
