@@ -5,22 +5,23 @@
 #include <AccelStepper.h>
 #include "rotor_definitions.h"
 
-bool led_state = true;// Used for blinking when packet received
+bool led_state = true;      // Used for blinking when packet received
 
-SX1278 radio;         // Instance of SX1278 LoRa
+SX1278 radio;               // Instance of SX1278 LoRa
 
+uint8_t packetNumber;
 uint8_t incoming_count = 5; // Count of incoming packets in duplex, (eg. 5 received for 1 transmitted)
                             // satellite sends this number of packets and then listens for packet which has to be sent from antenna
 
-String fragment;      // Used in parsing PC Serial messages, contains values in Strings
-String serialUSB_packet; // Serial messages buffer (from PC)
-String serial_packet;    // Serial messages buffer (from rotor remote)
-bool readingUSB_packet = false; //indicators for receiving serial commands from PC and rotor remote
+String fragment;            // Used in parsing PC Serial messages, contains values in Strings
+String serialUSB_packet;    // Serial messages buffer (from PC)
+String serial_packet;       // Serial messages buffer (from rotor remote)
+bool readingUSB_packet = false; //indicators for receiving serial commands from PC and rotor remote via UART
 bool reading_packet = false;    //true if the packet is not fully received yet
-                                //false if the opening '<' character was not received yet
+                                //false if the opening '<' character has not been received yet
 
-uint8_t toSend[2];    // Buffer to be sent via radio
-bool transmitting;    // Flag to be set during transmission
+uint8_t toSend[2];          // Buffer to be sent via radio
+bool transmitting;          // Flag to be set during transmission
 
 // Transmitted variables (recieved via Serial)
 uint8_t servo;        // 0 (0b0) - off, 1 (0b1) - on [first BIT of transmitted package]
@@ -42,8 +43,8 @@ float roll;
 
 
 //creates an object of AccelStepper class for each of the rotors
-AccelStepper stepperV(AccelStepper::DRIVER, STEPPERV_STEP_PIN, STEPPERV_DIR_PIN);
-AccelStepper stepperH(AccelStepper::DRIVER, STEPPERH_STEP_PIN, STEPPERH_DIR_PIN);
+AccelStepper stepperV(AccelStepper::DRIVER, STEPPERV_STEP_PIN, STEPPERV_DIR_PIN);   // stepper for vertical movement
+AccelStepper stepperH(AccelStepper::DRIVER, STEPPERH_STEP_PIN, STEPPERH_DIR_PIN);   // stepper for horizontal movement
 
 void setup()
 {
@@ -66,25 +67,29 @@ void setup()
 
 void loop()
 {
-  stepperV.run();                                     //tries to make a vertical / horizontal step
-  stepperH.run();                                     //these have to be called as often as possible
+  steppers_run();
 
   getSerial();
 
   duplex_loop();
 }
 
+
+/*****General purpose functions*****/
+
+
+// reads data from buffers and sends them for further processing, if the packet is complete
 void getSerial()
 {
   char incoming;
   while (SerialUSB.available() > 0)                         // If there are bytes waiting to be read from Serial
   {
     incoming = SerialUSB.read();                            // Get one character
-    if (readingUSB_packet) serialUSB_packet += incoming;          // Append character to packet
+    if (readingUSB_packet) serialUSB_packet += incoming;    // Append character to packet
 
     if (incoming == '<')                                    // '<' character opens the packet
     {
-      readingUSB_packet = true;                                // We want now to save characters
+      readingUSB_packet = true;                             // We want now to save characters
       serialUSB_packet = "";
       serialUSB_packet += incoming;
     }
@@ -122,6 +127,8 @@ void getSerial()
   //parseSerial();                    //parsing data here might overall take longer than in while loop
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 // Parses Serial message, eg. "s1Sm0M" -> servo = 1, motors = 0
 // takes an argument stating which string should be parsed
 void parseSerial(String serial_packet_choice)
@@ -156,6 +163,8 @@ void parseSerial(String serial_packet_choice)
   fragment = "";
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 String cutFragment(char openChar, char closeChar, String serial_packet)   // Cuts out variable strings from Serial message, eg. for args 'a', 'A': "<s1Sm0Ma230A>" -> "230"
 {
   if (serial_packet.indexOf('<') >= 0 && serial_packet.indexOf('>') >= 0 &&           // Validate packet (should contain bounding characters '<' '>')
@@ -166,6 +175,11 @@ String cutFragment(char openChar, char closeChar, String serial_packet)   // Cut
   return "bad";   // Return this if fragment wasn't found in packet
 }
 
+
+/*****Functions for rotor steering*****/
+
+
+//initiates AccelStepper class objects
 void rotorInit(){
   //Sets up speed, acceleration, enable pins for steppers
   stepperV.setEnablePin(STEPPERV_ENABLE_PIN);
@@ -181,10 +195,23 @@ void rotorInit(){
   stepperH.enableOutputs();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 //Returns the amount of steps to be executed in order to move the rotor a given angles
 int angleToSteps(float angle){
   return (int)microStepRate*400*127/13*angle/360;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+void steppers_run(){
+  stepperV.run();                                     //tries to make a vertical / horizontal step
+  stepperH.run();                                     //these have to be called as often as possible
+}
+
+
+/*****Functions for radio transmission*****/
+
 
 void duplex_setup()
 {
@@ -202,6 +229,15 @@ void duplex_setup()
   packetNumber = 0;
   transmitting = false;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+bool check_LoRa_INT()
+{
+  return (radio.pendingIRQ && digitalRead(radio.dio0) == HIGH);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 void duplex_loop()
 {
@@ -232,10 +268,10 @@ void duplex_loop()
       {                                                       // send packet then (satellite will listen for a while)
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
         getSerial();                                          // Receive data from Serial to be sent to satellite
-        
+
         toSend[0] = motors + servo;                           // Prepare packet, two bytes for motor and servo state
         toSend[1] = (uint8_t)(angle * (255.0 / 360.0));       // Convert float to byte and place it as 2nd byte
-        delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while 
+        //delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while
         SX1278_transmit(&radio, toSend, 2);                   // Transmit packet
         packetNumber = 0;
       }
@@ -247,6 +283,8 @@ void duplex_loop()
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 static void decodePacket()    // Converts bytes from received radio package to variables (depentent on format of package)
 {
   // This format: [0:3](pressure * 1000hPa), [4:7](temperature * 10*C), [8:11](latitude * 10^7), [12:15](longitude * 10^7), [16:18](euler angles mapped to byte)
@@ -257,4 +295,5 @@ static void decodePacket()    // Converts bytes from received radio package to v
   yaw = (float)(radio.rxBuffer[16]) * (360.0 / 255.0);
   pitch = (float)(radio.rxBuffer[17]) * (360.0 / 255.0);
   roll = (float)(radio.rxBuffer[18]) * (360.0 / 255.0);
+  packetNumber = radio.rxBuffer[radio.rxLen - 1];
 }
