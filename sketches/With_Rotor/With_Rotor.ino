@@ -20,6 +20,7 @@ bool reading_packet = false;    //true if the packet is not fully received yet
                                 //false if the opening '<' character was not received yet
 
 uint8_t toSend[2];    // Buffer to be sent via radio
+bool transmitting;    // Flag to be set during transmission
 
 // Transmitted variables (recieved via Serial)
 uint8_t servo;        // 0 (0b0) - off, 1 (0b1) - on [first BIT of transmitted package]
@@ -52,20 +53,11 @@ void setup()
   // Setup arduino
   SerialUSB.begin(115200);
   Serial.begin(115200);
-  SPI.begin();
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(1000);
 
-  // Setup radio
-  radio.config = sx1278_default_config;
-  radio.useDio0IRQ = false;
-  SX1278_init(&radio);
-
-  // Setup transmitted variables
-  angle = 0;
-  servo = 0;
-  motors = 0;
+  duplex_setup();
 
   //Setup transmitted rotor variables
   verticalAngle = 0;
@@ -77,42 +69,9 @@ void loop()
   stepperV.run();                                     //tries to make a vertical / horizontal step
   stepperH.run();                                     //these have to be called as often as possible
 
-  SX1278_receive(&radio);                             // Start listening for packet (waits until received)
-  decodePacket();                                     // Updates received variables from packet
-  SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
-                    "Pt" + String(temperature, 1) +   // format is like: x012345X
-                    "Tx" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
-                    "Xy" + String(longitude, 7) +     // eg. p1023.97P sends pressure
-                    "Ya" + String(yaw, 1) +
-                    "Ab" + String(pitch, 1) +
-                    "Bc" + String(roll, 1) +
-                    "Cr" + String(radio.rssi) + "R");
-                    
-
-  digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
-
-  stepperV.run();                                     //tries to make a vertical / horizontal step
-  stepperH.run();                                     //these have to be called as often as possible
-
   getSerial();
 
-  if (radio.rxDone)                                         // If received packet is OK
-  {
-    if (radio.rxBuffer[radio.rxLen - 1] == incoming_count)  // If packet number (last byte of packet) is equal to count of incoming packets
-    {                                                       // send packet then (satellite will listen for a while)
-                                                            // (counts must be configured equal on both radios for duplex to work)
-      getSerial();                                          // Receive data from Serial to be sent to satellite
-
-      toSend[0] = motors + servo;                           // Prepare packet, two bytes for motor and servo state
-      toSend[1] = (uint8_t)(angle * (255.0 / 360.0));       // Convert float to byte and place it as 2nd byte
-      delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while
-      SX1278_transmit(&radio, toSend, 2);                   // Transmit packet
-
-      //SX1278_transmit(&radio, (uint8_t*)"Duplex!", 7);    // Dummy packet
-    }
-
-    radio.rxDone = false;                                   // Remove packet received flag
-  } 
+  duplex_loop();
 }
 
 void getSerial()
@@ -207,23 +166,6 @@ String cutFragment(char openChar, char closeChar, String serial_packet)   // Cut
   return "bad";   // Return this if fragment wasn't found in packet
 }
 
-static void decodePacket()    // Converts bytes from received radio package to variables (depentent on format of package)
-{
-  // This format: [0:3](pressure * 1000hPa), [4:7](temperature * 10*C), [8:11](latitude * 10^7), [12:15](longitude * 10^7), [16:18](euler angles mapped to byte)
-  pressure = (float)(radio.rxBuffer[0] + (radio.rxBuffer[1] << 8) + (radio.rxBuffer[2] << 16) + (radio.rxBuffer[3] << 24)) / 1000.0;
-  temperature = (float)(radio.rxBuffer[4] + (radio.rxBuffer[5] << 8) + (radio.rxBuffer[6] << 16) + (radio.rxBuffer[7] << 24)) / 10.0;
-  latitude = (float)(radio.rxBuffer[8] + (radio.rxBuffer[9] << 8) + (radio.rxBuffer[10] << 16) + (radio.rxBuffer[11] << 24)) / 10000000.0;
-  longitude = (float)(radio.rxBuffer[12] + (radio.rxBuffer[13] << 8) + (radio.rxBuffer[14] << 16) + (radio.rxBuffer[15] << 24)) / 10000000.0;
-  yaw = (float)(radio.rxBuffer[16]) * (360.0 / 255.0);
-  pitch = (float)(radio.rxBuffer[17]) * (360.0 / 255.0);
-  roll = (float)(radio.rxBuffer[18]) * (360.0 / 255.0);
-}
-
-// Performance and debug
-//SerialUSBprintln("[LoRa] Packet received, " + (String)bitrate + "b/s, " + (String)packrate + "P/s");
-//SerialUSBprintln(String((int)radio.rxBuffer[radio.rxLen - 1]));
-
-
 void rotorInit(){
   //Sets up speed, acceleration, enable pins for steppers
   stepperV.setEnablePin(STEPPERV_ENABLE_PIN);
@@ -242,4 +184,77 @@ void rotorInit(){
 //Returns the amount of steps to be executed in order to move the rotor a given angles
 int angleToSteps(float angle){
   return (int)microStepRate*400*127/13*angle/360;
+}
+
+void duplex_setup()
+{
+  SPI.begin();
+  // Setup radio
+  radio.config = sx1278_default_config;
+  radio.useDio0IRQ = true;
+  SX1278_init(&radio);
+  SX1278_receive(&radio);
+
+  // Setup transmitted variables
+  angle = 0;
+  servo = 0;
+  motors = 0;
+  packetNumber = 0;
+  transmitting = false;
+}
+
+void duplex_loop()
+{
+  if (radio.useDio0IRQ)
+  {
+    if (check_LoRa_INT())                                   // Manually check for interrupt
+    {
+      SX1278_dio0_IRQ(&radio);                              // Finish packet reception/transmission routine
+      digitalWrite(LED_BUILTIN, led_state); led_state = !led_state; // toggle LED
+
+      if (!transmitting && radio.rxDone)                                    // Prints data to PC but only when wans't transmitting during previous routine
+      {
+        decodePacket();                                     // Updates received variables from packet
+        SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
+                          "Pt" + String(temperature, 1) +   // format is like: x012345X
+                          "Tx" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
+                          "Xy" + String(longitude, 7) +     // eg. p1023.97P sends pressure
+                          "Ya" + String(yaw, 1) +
+                          "Ab" + String(pitch, 1) +
+                          "Bc" + String(roll, 1) +
+                          "Cr" + String(radio.rssi) + "R");
+        radio.rxDone = false;
+      }
+      else { ; } // (Maybe to implement) Sends transmitted data to PC
+      transmitting = false;
+
+      if (packetNumber == incoming_count)  // If packet number (last byte of packet) is equal to count of incoming packets
+      {                                                       // send packet then (satellite will listen for a while)
+        transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
+        getSerial();                                          // Receive data from Serial to be sent to satellite
+        
+        toSend[0] = motors + servo;                           // Prepare packet, two bytes for motor and servo state
+        toSend[1] = (uint8_t)(angle * (255.0 / 360.0));       // Convert float to byte and place it as 2nd byte
+        delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while 
+        SX1278_transmit(&radio, toSend, 2);                   // Transmit packet
+        packetNumber = 0;
+      }
+      else
+      {
+        SX1278_receive(&radio);                                       // Start listening for packet
+      }
+    }
+  }
+}
+
+static void decodePacket()    // Converts bytes from received radio package to variables (depentent on format of package)
+{
+  // This format: [0:3](pressure * 1000hPa), [4:7](temperature * 10*C), [8:11](latitude * 10^7), [12:15](longitude * 10^7), [16:18](euler angles mapped to byte)
+  pressure = (float)(radio.rxBuffer[0] + (radio.rxBuffer[1] << 8) + (radio.rxBuffer[2] << 16) + (radio.rxBuffer[3] << 24)) / 1000.0;
+  temperature = (float)(radio.rxBuffer[4] + (radio.rxBuffer[5] << 8) + (radio.rxBuffer[6] << 16) + (radio.rxBuffer[7] << 24)) / 10.0;
+  latitude = (float)(radio.rxBuffer[8] + (radio.rxBuffer[9] << 8) + (radio.rxBuffer[10] << 16) + (radio.rxBuffer[11] << 24)) / 10000000.0;
+  longitude = (float)(radio.rxBuffer[12] + (radio.rxBuffer[13] << 8) + (radio.rxBuffer[14] << 16) + (radio.rxBuffer[15] << 24)) / 10000000.0;
+  yaw = (float)(radio.rxBuffer[16]) * (360.0 / 255.0);
+  pitch = (float)(radio.rxBuffer[17]) * (360.0 / 255.0);
+  roll = (float)(radio.rxBuffer[18]) * (360.0 / 255.0);
 }
