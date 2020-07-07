@@ -31,6 +31,12 @@ float angle;          // angle in degrees [second byte of transmitted package]
 // Transmitted variables (recieved via Serial) (for antenna rotor)
 float horizontalAngle; //relative angle for the rotor to rotate in a given plane
 float verticalAngle;   //applied for primitive manual steering
+bool rotorCalibrated = false; // true if the positive calibration feedback
+                              // has been received from the remote
+
+// Variables limiting rotor's  vertical movements in software
+long limitUp;
+long limitDown;
 
 // Received variables
 float pressure;
@@ -46,16 +52,20 @@ float roll;
 AccelStepper stepperV(AccelStepper::DRIVER, STEPPERV_STEP_PIN, STEPPERV_DIR_PIN);   // stepper for vertical movement
 AccelStepper stepperH(AccelStepper::DRIVER, STEPPERH_STEP_PIN, STEPPERH_DIR_PIN);   // stepper for horizontal movement
 
+
+
 void setup()
 {
-   //Init antenna rotor
-  rotorInit();
-
   // Setup arduino
   SerialUSB.begin(115200);
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
+
+  //Init antenna rotor after it's calibrated
+  while(!rotorCalibrated) getSerial();
+  rotorInit();
+
   delay(1000);
 
   duplex_setup();
@@ -63,6 +73,10 @@ void setup()
   //Setup transmitted rotor variables
   verticalAngle = 0;
   horizontalAngle = 0;
+
+  //setup rotor vertical limits
+  limitUp = angleToSteps(90);
+  limitDown = angleToSteps(-30);
 }
 
 void loop()
@@ -75,7 +89,9 @@ void loop()
 }
 
 
+/***********************************/
 /*****General purpose functions*****/
+/***********************************/
 
 
 // reads data from buffers and sends them for further processing, if the packet is complete
@@ -131,24 +147,28 @@ void getSerial()
 
 // Parses Serial message, eg. "s1Sm0M" -> servo = 1, motors = 0
 // takes an argument stating which string should be parsed
+//with current code it always takes a single packets
+//funcion sped up by ending exectution after successful parsing
 void parseSerial(String serial_packet_choice)
 {
   fragment = cutFragment('s', 'S', serial_packet_choice);
-  if (fragment != "bad") servo = (uint8_t)fragment.toInt();
+  if (fragment != "bad") {servo = (uint8_t)fragment.toInt(); return;}
   //SerialUSB.println("Servo: " + String(servo));
 
   fragment = cutFragment('m', 'M', serial_packet_choice);
-  if (fragment != "bad") motors = (uint8_t)fragment.toInt() * 2;
+  if (fragment != "bad") {motors = (uint8_t)fragment.toInt() * 2; return;}
   //SerialUSB.println("Motors: " + String(servo));
 
   fragment = cutFragment('a', 'A', serial_packet_choice);
-  if (fragment != "bad") angle = fragment.toFloat();
+  if (fragment != "bad") {angle = fragment.toFloat(); return;}
   //SerialUSB.println("Angle: " + String(servo));
 
   fragment = cutFragment('v', 'V', serial_packet_choice);
   if (fragment != "bad") {
     verticalAngle = fragment.toFloat();
-    stepperV.move(angleToSteps(verticalAngle));
+    moveIfPossible(angleToSteps(verticalAngle));
+    //stepperV.move(angleToSteps(verticalAngle));
+    return;
   //SerialUSB.println("Rotor V: " + String(verticalAngle));
   }
 
@@ -156,9 +176,12 @@ void parseSerial(String serial_packet_choice)
   if (fragment != "bad") {
      horizontalAngle = fragment.toFloat();
      stepperH.move(angleToSteps(horizontalAngle));
+     return;
      //horizontalAngle = 0;
      //SerialUSB.println("Rotor H: " + String(verticalAngle));
   }
+  fragment = cutFragment('c', 'C', serial_packet_choice);
+  if (fragment != "bad") {rotorCalibrated = true; return;}
   //serial_packet = "";
   fragment = "";
 }
@@ -176,12 +199,15 @@ String cutFragment(char openChar, char closeChar, String serial_packet)   // Cut
 }
 
 
+/**************************************/
 /*****Functions for rotor steering*****/
+/**************************************/
 
 
 //initiates AccelStepper class objects
 void rotorInit(){
   //Sets up speed, acceleration, enable pins for steppers
+  if(!rotorCalibrated) return;
   stepperV.setEnablePin(STEPPERV_ENABLE_PIN);
   stepperV.setPinsInverted(false, false, true);
   stepperV.setMaxSpeed(3*1600.0);
@@ -193,6 +219,11 @@ void rotorInit(){
   stepperH.setMaxSpeed(3*1600.0);
   stepperH.setAcceleration(500.0);
   stepperH.enableOutputs();
+
+  stepperV.setCurrentPosition(0);
+  stepperH.setCurrentPosition(0);
+
+  rotorCalibrated = false; // back to false so that the rotor isn't initiated in loop every time
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -204,13 +235,25 @@ int angleToSteps(float angle){
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// checks if the ordered movement doesn't exceed limitations in vertical axis
+// it will make a movement if the target position doesn't exceed limit
+void moveIfPossible(int movement){
+  if(stepperV.targetPosition() >= limitUp && movement > 0) return;
+  else if (stepperV.targetPosition() <= limitDown && movement < 0) return;
+  else stepperV.move(movement);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void steppers_run(){
   stepperV.run();                                     //tries to make a vertical / horizontal step
   stepperH.run();                                     //these have to be called as often as possible
 }
 
 
+/******************************************/
 /*****Functions for radio transmission*****/
+/******************************************/
 
 
 void duplex_setup()
