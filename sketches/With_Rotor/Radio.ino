@@ -36,12 +36,12 @@ void duplex_loop()
         decodePacket();                                     // Updates received variables from packet
         SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
                           "Pt" + String(temperature, 1) +   // format is like: x012345X
-                          "Tx" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
-                          "Xy" + String(longitude, 7) +     // eg. p1023.97P sends pressure
-                          "Ya" + String(yaw, 1) +
-                          "Ab" + String(pitch, 1) +
-                          "Bc" + String(roll, 1) +
-                          "Cr" + String(radio.rssi) +
+                          "Tn" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
+                          "Ne" + String(longitude, 7) +     // eg. p1023.97P sends pressure
+                          "Ez" + String(yaw, 1) +
+                          "Zy" + String(pitch, 1) +
+                          "Yx" + String(roll, 1) +
+                          "Xr" + String(radio.rssi) +
                           "Ro" + String(operationMode) +
                           "Os" + String(smallSPS, 2) +         //approximation to be corrected
                           "Sb" + String(bigSPS, 2) +
