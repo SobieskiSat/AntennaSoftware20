@@ -20,7 +20,7 @@ void getSerial()
     }
     else if (incoming == '>') {
       readingUSB_packet = false;       // '>' character ends the packet
-      parseSerial(serialUSB_packet);
+      parseSerial(serialUSB_packet);   //parses serial data immidiately when one packet is received
     }
   }
 
@@ -53,7 +53,7 @@ void getSerial()
 void parseSerial(String serial_packet_choice)
 {
   //rotor vertical - remote
-  fragment = cutFragment('v', 'V', serial_packet_choice);
+  fragment = cutFragment('q', 'Q', serial_packet_choice);
   if (fragment != "bad") {
     verticalAngle = fragment.toFloat();
     moveIfPossibleVertical(angleToSteps(verticalAngle));
@@ -63,7 +63,7 @@ void parseSerial(String serial_packet_choice)
   }
 
   //rotor horizontal - remote
-  fragment = cutFragment('h', 'H', serial_packet_choice);
+  fragment = cutFragment('w', 'W', serial_packet_choice);
   if (fragment != "bad") {
       horizontalAngle= fragment.toFloat();
      stepperH.move(angleToSteps(horizontalAngle));
@@ -83,7 +83,7 @@ void parseSerial(String serial_packet_choice)
   //SerialUSB.println("Motors: " + String(servo));
 
   //angle
-  fragment = cutFragment('a', 'A', serial_packet_choice);
+  fragment = cutFragment('d', 'D', serial_packet_choice);
   if (fragment != "bad") {angle = fragment.toFloat(); return;}
   //SerialUSB.println("Angle: " + String(servo));
 
@@ -100,6 +100,18 @@ void parseSerial(String serial_packet_choice)
 
   fragment = cutFragment('l', 'L', serial_packet_choice);           //alt from BMP in the future?
   if (fragment != "bad") {rotor_alt = fragment.toFloat(); return;}
+
+  fragment = cutFragment('o', 'O', serial_packet_choice);           //updats operationMode which will be sent to our satellite
+  if (fragment != "bad") {operationMode = fragment.toInt(); return;}
+
+  fragment = cutFragment('n', 'N', serial_packet_choice);           //updats latitudeTarget which will be sent to our satellite
+  if (fragment != "bad") {latitudeTarget = fragment.toFloat(); return;}
+
+  fragment = cutFragment('e', 'E', serial_packet_choice);           //updats longitudeTarget which will be sent to our satellite
+  if (fragment != "bad") {longitudeTarget = fragment.toFloat(); return;}
+
+  fragment = cutFragment('a', 'A', serial_packet_choice);           //updats altitudeTarget which will be sent to our satellite
+  if (fragment != "bad") {altitudeTarget = fragment.toFloat(); return;}
 
   //moveToIfPossible(angleToSteps(bearing(latitude, longitude, rotor_lat, rotor_lon)));
 
