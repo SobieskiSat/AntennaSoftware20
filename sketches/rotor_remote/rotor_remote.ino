@@ -19,8 +19,8 @@
 #define HL "<q-" horizontalMove "Q>"
 #define HR "<q" horizontalMove "Q>"
 
-#define VU "<w" verticalMove "W>"
-#define VD "<W-" verticalMove "W>"
+#define VU "<w-" verticalMove "W>"
+#define VD "<w" verticalMove "W>"
 
 #define SON "<s0S>"   //not sure in which order
 #define SOFF "<s1S>"
