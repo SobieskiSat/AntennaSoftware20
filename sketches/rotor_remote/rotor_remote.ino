@@ -8,19 +8,19 @@
 //As for now I have no idea what 0 and 1 means in any of these situations
 //We have to make it simple to use and understand
 
-#define verticalMove 5
-#define horizontalMove 5
+#define verticalMove "5"
+#define horizontalMove "5"
 #define angleMove 1
 
 #define inputLen 9
 
 #define calibrated "<c1C>"
 
-#define HL "<h-5H>"
-#define HR "<h5H>"
+#define HL "<q-" horizontalMove "Q>"
+#define HR "<q" horizontalMove "Q>"
 
-#define VU "<v-5V>"
-#define VD "<v5V>"
+#define VU "<w" verticalMove "W>"
+#define VD "<W-" verticalMove "W>"
 
 #define SON "<s0S>"   //not sure in which order
 #define SOFF "<s1S>"
@@ -76,12 +76,12 @@ void loop() {
     if(angle >= 360) angle = 0;
     angle += angleMove;
 
-    sendCommand("<a" + String(angle) + "A>");
+    sendCommand("<d" + String(angle) + "D>");
   }
   if(is_low(5)){                        //decrement motor angle
     if(angle <= 0) angle = 360;
     angle -= angleMove;
-    sendCommand("<a" + String(angle) + "A>");
+    sendCommand("<d" + String(angle) + "D>");
   }
 
   if(is_low(6)) {
