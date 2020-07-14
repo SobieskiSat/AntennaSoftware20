@@ -2,6 +2,9 @@
 /*****Functions for rotor steering*****/
 /**************************************/
 
+//STEPPER CONNECTIONS:
+//Connect the stepper wires to the goldpins in the middle
+//so that the metal endings seen through holes in the plug face outwards
 
 //initiates AccelStepper class objects
 void rotorInit(){

@@ -9,6 +9,11 @@
 #include <AccelStepper.h>
 #include "rotor_definitions.h"
 
+#define SENDPACKETSAMOUNT 2
+
+#define BAD "@" //char or string to be returned, if a serial message is invalid
+//We can possibly delete checking for presence of '<' and '>' characters, since they are not included
+
 bool led_state = true;      // Used for blinking when packet received
 
 SX1278 radio;               // Instance of SX1278 LoRa
@@ -17,7 +22,7 @@ uint8_t packetNumber = 0;
 uint8_t incoming_count = 5; // Count of incoming packets in duplex, (eg. 5 received for 1 transmitted)
                             // satellite sends this number of packets and then listens for packet which has to be sent from antenna
 
-uint8_t toSend[2];          // Buffer to be sent via radio
+uint8_t toSend[SENDPACKETSAMOUNT];                  // Buffer to be sent via radio
 bool transmitting = false;          // Flag to be set during transmission
 
 String fragment;            // Used in parsing PC Serial messages, contains values in Strings

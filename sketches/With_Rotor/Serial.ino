@@ -53,8 +53,8 @@ void getSerial()
 void parseSerial(String serial_packet_choice)
 {
   //rotor vertical - remote
-  fragment = cutFragment('q', 'Q', serial_packet_choice);
-  if (fragment != "bad") {
+  fragment = cutFragment('w', 'W', serial_packet_choice);
+  if (fragment != BAD) {
     verticalAngle = fragment.toFloat();
     moveIfPossibleVertical(angleToSteps(verticalAngle));
     //stepperV.move(angleToSteps(verticalAngle));
@@ -63,8 +63,8 @@ void parseSerial(String serial_packet_choice)
   }
 
   //rotor horizontal - remote
-  fragment = cutFragment('w', 'W', serial_packet_choice);
-  if (fragment != "bad") {
+  fragment = cutFragment('q', 'Q', serial_packet_choice);
+  if (fragment != BAD) {
       horizontalAngle= fragment.toFloat();
      stepperH.move(angleToSteps(horizontalAngle));
      return;
@@ -74,44 +74,44 @@ void parseSerial(String serial_packet_choice)
 
   //servo
   fragment = cutFragment('s', 'S', serial_packet_choice);
-  if (fragment != "bad") {servo = (uint8_t)fragment.toInt(); return;}
+  if (fragment != BAD) {servo = (uint8_t)fragment.toInt(); return;}
   //SerialUSB.println("Servo: " + String(servo));
 
   //motors
   fragment = cutFragment('m', 'M', serial_packet_choice);
-  if (fragment != "bad") {motors = (uint8_t)fragment.toInt() * 2; return;}
+  if (fragment != BAD) {motors = (uint8_t)fragment.toInt() * 2; return;}
   //SerialUSB.println("Motors: " + String(servo));
 
   //angle
   fragment = cutFragment('d', 'D', serial_packet_choice);
-  if (fragment != "bad") {angle = fragment.toFloat(); return;}
+  if (fragment != BAD) {angle = fragment.toFloat(); return;}
   //SerialUSB.println("Angle: " + String(servo));
 
   //rotor calibrated - remote
   fragment = cutFragment('c', 'C', serial_packet_choice);
-  if (fragment != "bad") {rotorCalibrated = true; return;}
+  if (fragment != BAD) {rotorCalibrated = true; return;}
 
   //setting initial rotor position in space
   fragment = cutFragment('j', 'J', serial_packet_choice);
-  if (fragment != "bad") {rotor_lat = fragment.toFloat(); return;}
+  if (fragment != BAD) {rotor_lat = fragment.toFloat(); return;}
 
   fragment = cutFragment('k', 'K', serial_packet_choice);
-  if (fragment != "bad") {rotor_lon = fragment.toFloat(); return;}
+  if (fragment != BAD) {rotor_lon = fragment.toFloat(); return;}
 
   fragment = cutFragment('l', 'L', serial_packet_choice);           //alt from BMP in the future?
-  if (fragment != "bad") {rotor_alt = fragment.toFloat(); return;}
+  if (fragment != BAD) {rotor_alt = fragment.toFloat(); return;}
 
   fragment = cutFragment('o', 'O', serial_packet_choice);           //updats operationMode which will be sent to our satellite
-  if (fragment != "bad") {operationMode = fragment.toInt(); return;}
+  if (fragment != BAD) {operationMode = fragment.toInt(); return;}
 
   fragment = cutFragment('n', 'N', serial_packet_choice);           //updats latitudeTarget which will be sent to our satellite
-  if (fragment != "bad") {latitudeTarget = fragment.toFloat(); return;}
+  if (fragment != BAD) {latitudeTarget = fragment.toFloat(); return;}
 
   fragment = cutFragment('e', 'E', serial_packet_choice);           //updats longitudeTarget which will be sent to our satellite
-  if (fragment != "bad") {longitudeTarget = fragment.toFloat(); return;}
+  if (fragment != BAD) {longitudeTarget = fragment.toFloat(); return;}
 
   fragment = cutFragment('a', 'A', serial_packet_choice);           //updats altitudeTarget which will be sent to our satellite
-  if (fragment != "bad") {altitudeTarget = fragment.toFloat(); return;}
+  if (fragment != BAD) {altitudeTarget = fragment.toFloat(); return;}
 
   //moveToIfPossible(angleToSteps(bearing(latitude, longitude, rotor_lat, rotor_lon)));
 
@@ -129,7 +129,7 @@ String cutFragment(char openChar, char closeChar, String serial_packet)   // Cut
   {
     return (serial_packet.substring(serial_packet.indexOf(openChar) + 1, serial_packet.indexOf(closeChar)));  // Cut fragment out
   }
-  return "bad";   // Return this if fragment wasn't found in packet
+  return BAD;   // Return this if fragment wasn't found in packet
 }
 
 ////////////////////////////////////////////////////////////////////////////////
