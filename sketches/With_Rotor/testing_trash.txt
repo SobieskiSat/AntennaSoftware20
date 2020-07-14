@@ -1,0 +1,23 @@
+//rotor
+fragment = cutFragment('x', 'X', serial_packet_choice);
+if (fragment != "bad") {
+    latitude = fragment.toFloat();
+   //stepperH.moveTo(angleToSteps(horizontalAngle));
+   //return;
+   //horizontalAngle = 0;
+   //SerialUSB.println("Rotor H: " + String(verticalAngle));
+}
+
+fragment = cutFragment('y', 'Y', serial_packet_choice);
+if (fragment != "bad") {
+    longitude= fragment.toFloat();
+   //stepperH.moveTo(angleToSteps(horizontalAngle));
+   //return;
+   //horizontalAngle = 0;
+   //SerialUSB.println("Rotor H: " + String(verticalAngle));
+}
+
+fragment = cutFragment('z', 'Z', serial_packet_choice);
+if (fragment != "bad") {pressBMP = fragment.toFloat();
+stepperV.moveTo(angleToSteps(movementVertical()));
+}
