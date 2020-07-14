@@ -32,6 +32,10 @@ uint8_t servo = 0;        // 0 (0b0) - off, 1 (0b1) - on [first BIT of transmitt
 uint8_t motors = 0;       // 0 (0b00) - off, 2 (0b10) - on [second BIT of transmitted package]
 float angle = 0;          // angle in degrees [second byte of transmitted package]
 
+float latitudeTarget;
+float longitudeTarget;
+float altitudeTarget;
+
 // Transmitted variables (recieved via Serial) (for antenna rotor)
 float horizontalAngle = 0; //relative angle for the rotor to rotate in a given plane
 float verticalAngle = 0;   //applied for primitive manual steering
