@@ -12,6 +12,7 @@
 #define SENDPACKETSAMOUNT 2
 
 #define BAD "@" //char or string to be returned, if a serial message is invalid
+//replaced "bad", because it's shorter and speeds up parsing process
 //We can possibly delete checking for presence of '<' and '>' characters, since they are not included
 
 bool led_state = true;      // Used for blinking when packet received

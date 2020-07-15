@@ -65,7 +65,7 @@ void parseSerial(String serial_packet_choice)
   //rotor horizontal - remote
   fragment = cutFragment('q', 'Q', serial_packet_choice);
   if (fragment != BAD) {
-      horizontalAngle= fragment.toFloat();
+     horizontalAngle = fragment.toFloat();
      stepperH.move(angleToSteps(horizontalAngle));
      return;
      //horizontalAngle = 0;
