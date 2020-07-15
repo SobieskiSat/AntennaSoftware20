@@ -38,11 +38,12 @@ void duplex_loop()
                           "Pt" + String(temperature, 1) +   // format is like: x012345X
                           "Tn" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
                           "Ne" + String(longitude, 7) +     // eg. p1023.97P sends pressure
-                          "Ez" + String(yaw, 1) +
+                          "Ea" + String(altitude, 2) +
+                          "Az" + String(yaw, 1) +
                           "Zy" + String(pitch, 1) +
                           "Yx" + String(roll, 1) +
                           "Xr" + String(radio.rssi) +
-                          "Ro" + String(operationMode) +
+                          "Ro" + String(operationModeFB) +
                           "Os" + String(smallSPS, 2) +         //approximation to be corrected
                           "Sb" + String(bigSPS, 2) +
                           "Bv" + String(stepperV.currentPosition()) +
@@ -63,15 +64,13 @@ void duplex_loop()
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
         getSerial();                                          // Receive data from Serial to be sent to satellite
 
-        toSend[0] = motors + servo;                           // Prepare packet, two bytes for motor and servo state
-        toSend[1] = (uint8_t)(angle * (255.0 / 360.0));       // Convert float to byte and place it as 2nd byte
-        //delay(10);                                            // [!!] Satellite seems to have problems with instantaneous reply so wait for a while
-        SX1278_transmit(&radio, toSend, SENDPACKETSAMOUNT);                   // Transmit packet
+        preparePacket();
+        SX1278_transmit(&radio, radio.txBuffer, radio.txLen); // Transmit packet
         packetNumber = 0;
       }
       else
       {
-        SX1278_receive(&radio);                                       // Start listening for packet
+        SX1278_receive(&radio);                               // Start listening for packet
       }
     }
   }
@@ -79,16 +78,60 @@ void duplex_loop()
 
 ////////////////////////////////////////////////////////////////////////////////
 
+static void preparePacket()
+{
+  uint32_t temv = 0;
+  // format: MOT-1/8, SER-1/8, OPMOD-6/8, ANG-1, LAT-4, LON-4, ALT-2
+  radio.txBuffer[0] = ((uint8_t)(motors) << 0) |
+                      ((uint8_t)(servo) << 1) |
+                      ((uint8_t)(operationMode << 2));
+
+  radio.txBuffer[1] = (uint8_t)(angle * 255.0 / 360.0);
+  radio.txLen = 2;
+    
+  if (operationMode == 1)
+  {
+    floatToBytes(&(latitudeTarget), radio.txBuffer + 3);
+    floatToBytes(&(longitudeTarget), radio.txBuffer + 7);
+    
+    temv = (uint32_t)(altitudeTarget * 10);
+    memcpy(radio.txBuffer + 11, (uint8_t*)&temv, 2);
+    radio.txLen = 13;
+  }
+}
+
 static void decodePacket()    // Converts bytes from received radio package to variables (depentent on format of package)
 {
-  //after decoding the packet it sends the data to the computer
-  // This format: [0:3](pressure * 1000hPa), [4:7](temperature * 10*C), [8:11](latitude * 10^7), [12:15](longitude * 10^7), [16:18](euler angles mapped to byte)
-  pressure = (float)(radio.rxBuffer[0] + (radio.rxBuffer[1] << 8) + (radio.rxBuffer[2] << 16) + (radio.rxBuffer[3] << 24)) / 1000.0;
-  temperature = (float)(radio.rxBuffer[4] + (radio.rxBuffer[5] << 8) + (radio.rxBuffer[6] << 16) + (radio.rxBuffer[7] << 24)) / 10.0;
-  latitude = (float)(radio.rxBuffer[8] + (radio.rxBuffer[9] << 8) + (radio.rxBuffer[10] << 16) + (radio.rxBuffer[11] << 24)) / 10000000.0;
-  longitude = (float)(radio.rxBuffer[12] + (radio.rxBuffer[13] << 8) + (radio.rxBuffer[14] << 16) + (radio.rxBuffer[15] << 24)) / 10000000.0;
-  yaw = (float)(radio.rxBuffer[16]) * (360.0 / 255.0);
-  pitch = (float)(radio.rxBuffer[17]) * (360.0 / 255.0);
-  roll = (float)(radio.rxBuffer[18]) * (360.0 / 255.0);
-  packetNumber = radio.rxBuffer[radio.rxLen - 1];
+  if (radio.rxLen == 23)
+  {
+    // format: TEMP-2, PRES-3, LAT-4, LON-4, ALT-2, YAW-1, PITCH-1, ROLL-1, SPS1-1, SPS10-1, OPMODE-1, PN-1
+    uint32_t temv = 0;
+  
+    memcpy((uint8_t*)&temv, radio.rxBuffer + 0, 2);  // 0:1
+    temperature = ((float)(temv) / 1000.0) - 10;
+  
+    pressure = (float)(temv) / 10000.0;
+    memcpy((uint8_t*)&temv, radio.rxBuffer + 2, 3);  // 2:5
+  
+    bytesToFloat(radio.rxBuffer + 6, &latitude);   // 6:9
+    bytesToFloat(radio.rxBuffer + 10, &longitude); // 10:13
+  
+    altitude = (float)(temv) / 10;
+    memcpy((uint8_t*)&temv, radio.rxBuffer + 14, 2); // 14:15
+  
+    yaw = (float)(radio.rxBuffer[16]) * 360.0 / 255.0;    // 16
+    pitch = (float)(radio.rxBuffer[17]) * 360.0 / 255.0;  // 17
+    roll = (float)(radio.rxBuffer[18]) * 360.0 / 255.0;   // 18
+  
+    /*
+    smallSPS = (float)(radio.rxBuffer[19]) * __ / 255.0;  // 19
+    bigSPS = (float)(radio.rxBuffer[20]) * __ / 255.0;   // 20
+    */
+  
+    operationModeFB = radio.rxBuffer[21];  // 21
+    packetNumber = radio.rxBuffer[22];    // 22
+  }
 }
+
+static inline void floatToBytes(float* value, uint8_t* buffer) { for (uint8_t i = 0; i < 4; i++) buffer[i] = *((uint8_t*)(value) + i); }
+static inline void bytesToFloat(uint8_t* buffer, float* value) { for (uint8_t i = 0; i < 4; i++) *((uint8_t*)(value) + i) = buffer[i]; }
