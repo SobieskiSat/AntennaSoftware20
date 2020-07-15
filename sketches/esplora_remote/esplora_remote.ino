@@ -47,8 +47,8 @@ int angle = 0;    //initial heading angle
 bool servo = 0;   //initial servo state
 bool motor = 0;   //initial motor state
 
-bool previousServo;
-bool previousMotor;
+bool previousServo = 1;
+bool previousMotor = 1;
 
 // becomes true after first calibration button pressed
 // we might distinguish two distinctive commands to send
@@ -68,8 +68,10 @@ void setup(){
   for(int i=0; i<inputLen; i++) {
     pinMode(inputs[i], INPUT_PULLUP);
   }
+  pinMode(16, OUTPUT);
+  digitalWrite(16, LOW); //pin for DIP switch pulldown
   Serial1.begin(115200);
-  //SerialUSB.begin(115200);
+  SerialUSB.begin(115200);
 }
 
 void loop() {
@@ -90,8 +92,8 @@ void loop() {
     sendCommand("<d" + String(angle) + "D>");
   }
 
-/*
-  if(is_low(6)) {
+
+  if(is_low(1)) {
     previousMotor = motor;
     motor = 0;              //will have to take into consideration initial settings, what we consider as ON
     if(motor != previousMotor)
@@ -104,7 +106,7 @@ void loop() {
       sendCommand(MOFF);
   }
 
-  if(is_low(7)) {
+  if(is_low(0)) {
     previousServo = servo;
     servo = 0;
     if(servo != previousServo)
@@ -116,7 +118,6 @@ void loop() {
     if(servo != previousServo)
       sendCommand(SOFF);
   }
-  */
 
   if(!Esplora.readButton(SWITCH_DOWN))
     if(halfCalibrated) sendCommand(calibrated); //send signal, that the rotor in its (0,0) position
@@ -130,7 +131,7 @@ bool is_low(uint8_t i){
 
 void sendCommand(String command){
   Serial1.print(command);
-  //SerialUSB.println(command);
+  SerialUSB.println(command);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(100);
   digitalWrite(LED_BUILTIN, LOW);
