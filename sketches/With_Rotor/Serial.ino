@@ -74,12 +74,12 @@ void parseSerial(String serial_packet_choice)
 
   //servo
   fragment = cutFragment('s', 'S', serial_packet_choice);
-  if (fragment != BAD) {servo = (uint8_t)fragment.toInt(); return;}
+  if (fragment != BAD) {servo = (bool)fragment.toInt(); return;}
   //SerialUSB.println("Servo: " + String(servo));
 
   //motors
   fragment = cutFragment('m', 'M', serial_packet_choice);
-  if (fragment != BAD) {motors = (uint8_t)fragment.toInt() * 2; return;}
+  if (fragment != BAD) {motors = (bool)fragment.toInt(); return;}
   //SerialUSB.println("Motors: " + String(servo));
 
   //angle

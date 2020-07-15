@@ -9,8 +9,6 @@
 #include <AccelStepper.h>
 #include "rotor_definitions.h"
 
-#define SENDPACKETSAMOUNT 2
-
 #define BAD "@" //char or string to be returned, if a serial message is invalid
 //We can possibly delete checking for presence of '<' and '>' characters, since they are not included
 
@@ -21,8 +19,7 @@ SX1278 radio;               // Instance of SX1278 LoRa
 uint8_t packetNumber = 0;
 uint8_t incoming_count = 5; // Count of incoming packets in duplex, (eg. 5 received for 1 transmitted)
                             // satellite sends this number of packets and then listens for packet which has to be sent from antenna
-
-uint8_t toSend[SENDPACKETSAMOUNT];                  // Buffer to be sent via radio
+                            
 bool transmitting = false;          // Flag to be set during transmission
 
 String fragment;            // Used in parsing PC Serial messages, contains values in Strings
@@ -33,8 +30,9 @@ bool reading_packet = false;    //true if the packet is not fully received yet
                                 //false if the opening '<' character has not been received yet
 
 // Transmitted variables (recieved via Serial)
-uint8_t servo = 0;        // 0 (0b0) - off, 1 (0b1) - on [first BIT of transmitted package]
-uint8_t motors = 0;       // 0 (0b00) - off, 2 (0b10) - on [second BIT of transmitted package]
+bool servo = 0;        // 0 (0b0) - off, 1 (0b1) - on [first BIT of transmitted package]
+bool motors = 0;       // 0 (0b00) - off, 2 (0b10) - on [second BIT of transmitted package]
+uint8_t operationMode = 31;
 float angle = 0;          // angle in degrees [second byte of transmitted package]
 
 float latitudeTarget;
@@ -62,14 +60,14 @@ float pressure;
 float temperature;
 float latitude;
 float longitude;
-//float altitude
+float altitude;
 float yaw;
 float pitch;
 float roll;
 
 float smallSPS;
 float bigSPS;
-float operationMode;
+float operationModeFB;  // FB - feedback
 
 
 //float presssBMP = 985; // was needed for tests
