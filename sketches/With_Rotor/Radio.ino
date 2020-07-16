@@ -59,7 +59,7 @@ void duplex_loop()
       else { ; } // (Maybe to implement) Sends transmitted data to PC
       transmitting = false;
 
-      if (packetNumber == incoming_count)  // If packet number (last byte of packet) is equal to count of incoming packets
+      if (packetNumber == incoming_count-1)  // If packet number (last byte of packet) is equal to count of incoming packets
       {                                                       // send packet then (satellite will listen for a while)
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
         getSerial();                                          // Receive data from Serial to be sent to satellite
@@ -88,12 +88,12 @@ static void preparePacket()
 
   radio.txBuffer[1] = (uint8_t)(angle * 255.0 / 360.0);
   radio.txLen = 2;
-    
+
   if (operationMode == 1)
   {
     floatToBytes(&(latitudeTarget), radio.txBuffer + 3);
     floatToBytes(&(longitudeTarget), radio.txBuffer + 7);
-    
+
     temv = (uint32_t)(altitudeTarget * 10);
     memcpy(radio.txBuffer + 11, (uint8_t*)&temv, 2);
     radio.txLen = 13;
@@ -106,28 +106,28 @@ static void decodePacket()    // Converts bytes from received radio package to v
   {
     // format: TEMP-2, PRES-3, LAT-4, LON-4, ALT-2, YAW-1, PITCH-1, ROLL-1, SPS1-1, SPS10-1, OPMODE-1, PN-1
     uint32_t temv = 0;
-  
+
     memcpy((uint8_t*)&temv, radio.rxBuffer + 0, 2);  // 0:1
     temperature = ((float)(temv) / 1000.0) - 10;
-  
+
     pressure = (float)(temv) / 10000.0;
     memcpy((uint8_t*)&temv, radio.rxBuffer + 2, 3);  // 2:5
-  
+
     bytesToFloat(radio.rxBuffer + 6, &latitude);   // 6:9
     bytesToFloat(radio.rxBuffer + 10, &longitude); // 10:13
-  
+
     altitude = (float)(temv) / 10;
     memcpy((uint8_t*)&temv, radio.rxBuffer + 14, 2); // 14:15
-  
+
     yaw = (float)(radio.rxBuffer[16]) * 360.0 / 255.0;    // 16
     pitch = (float)(radio.rxBuffer[17]) * 360.0 / 255.0;  // 17
     roll = (float)(radio.rxBuffer[18]) * 360.0 / 255.0;   // 18
-  
+
     /*
     smallSPS = (float)(radio.rxBuffer[19]) * __ / 255.0;  // 19
     bigSPS = (float)(radio.rxBuffer[20]) * __ / 255.0;   // 20
     */
-  
+
     operationModeFB = radio.rxBuffer[21];  // 21
     packetNumber = radio.rxBuffer[22];    // 22
   }

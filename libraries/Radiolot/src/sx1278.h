@@ -50,7 +50,8 @@ typedef struct
 	uint8_t txLen;
 	uint8_t rxLen;
 	uint8_t rxBuffer[SX1278_MAX_PACKET];
-
+	uint8_t txBuffer[SX1278_MAX_PACKET];
+	
 } SX1278;
 
 bool SX1278_init(SX1278* inst);
