@@ -20,7 +20,7 @@ SX1278 radio;               // Instance of SX1278 LoRa
 uint8_t packetNumber = 0;
 uint8_t incoming_count = 5; // Count of incoming packets in duplex, (eg. 5 received for 1 transmitted)
                             // satellite sends this number of packets and then listens for packet which has to be sent from antenna
-                            
+
 bool transmitting = false;          // Flag to be set during transmission
 
 String fragment;            // Used in parsing PC Serial messages, contains values in Strings
@@ -68,7 +68,7 @@ float roll;
 
 float smallSPS;
 float bigSPS;
-float operationModeFB;  // FB - feedback
+uint8_t operationModeFB;  // FB - feedback
 
 
 //float presssBMP = 985; // was needed for tests

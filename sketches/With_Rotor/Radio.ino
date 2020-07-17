@@ -110,23 +110,23 @@ static void decodePacket()    // Converts bytes from received radio package to v
     memcpy((uint8_t*)&temv, radio.rxBuffer + 0, 2);  // 0:1
     temperature = ((float)(temv) / 1000.0) - 10;
 
-    pressure = (float)(temv) / 10000.0;
+    temv = 0;
     memcpy((uint8_t*)&temv, radio.rxBuffer + 2, 3);  // 2:5
+    pressure = (float)(temv) / 10000.0;
 
     bytesToFloat(radio.rxBuffer + 6, &latitude);   // 6:9
     bytesToFloat(radio.rxBuffer + 10, &longitude); // 10:13
 
-    altitude = (float)(temv) / 10;
+    temv = 0;
     memcpy((uint8_t*)&temv, radio.rxBuffer + 14, 2); // 14:15
+    altitude = (float)(temv) / 10;
 
     yaw = (float)(radio.rxBuffer[16]) * 360.0 / 255.0;    // 16
     pitch = (float)(radio.rxBuffer[17]) * 360.0 / 255.0;  // 17
     roll = (float)(radio.rxBuffer[18]) * 360.0 / 255.0;   // 18
 
-    /*
-    smallSPS = (float)(radio.rxBuffer[19]) * __ / 255.0;  // 19
-    bigSPS = (float)(radio.rxBuffer[20]) * __ / 255.0;   // 20
-    */
+    smallSPS = (float)(radio.rxBuffer[19]) * 50 / 255.0;  // 19
+    bigSPS = (float)(radio.rxBuffer[20]) * 50 / 255.0;   // 20
 
     operationModeFB = radio.rxBuffer[21];  // 21
     packetNumber = radio.rxBuffer[22];    // 22
