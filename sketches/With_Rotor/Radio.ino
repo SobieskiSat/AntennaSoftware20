@@ -59,12 +59,16 @@ void duplex_loop()
       else { ; } // (Maybe to implement) Sends transmitted data to PC
       transmitting = false;
 
+      SerialUSB.println("Packet number:" + String(packetNumber));
+
       if (packetNumber == incoming_count-1)  // If packet number (last byte of packet) is equal to count of incoming packets
-      {                                                       // send packet then (satellite will listen for a while)
+      {
+        SerialUSB.println("hello boys, I'm sending");                                                  // send packet then (satellite will listen for a while)
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
         getSerial();                                          // Receive data from Serial to be sent to satellite
 
         preparePacket();
+        //delay(100);
         SX1278_transmit(&radio, radio.txBuffer, radio.txLen); // Transmit packet
         packetNumber = 0;
       }
@@ -102,7 +106,7 @@ static void preparePacket()
 
 static void decodePacket()    // Converts bytes from received radio package to variables (depentent on format of package)
 {
-  if (radio.rxLen == 23)
+  if (radio.rxLen >= 23)
   {
     // format: TEMP-2, PRES-3, LAT-4, LON-4, ALT-2, YAW-1, PITCH-1, ROLL-1, SPS1-1, SPS10-1, OPMODE-1, PN-1
     uint32_t temv = 0;
@@ -130,6 +134,7 @@ static void decodePacket()    // Converts bytes from received radio package to v
 
     operationModeFB = radio.rxBuffer[21];  // 21
     packetNumber = radio.rxBuffer[22];    // 22
+    SerialUSB.println("packetNumber: " + String(packetNumber));
   }
 }
 
