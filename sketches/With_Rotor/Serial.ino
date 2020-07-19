@@ -55,7 +55,7 @@ void parseSerial(String serial_packet_choice)
   //rotor vertical - remote
   fragment = cutFragment('w', 'W', serial_packet_choice);
   if (fragment != BAD) {
-    verticalAngle = fragment.toFloat();
+    verticalAngle = -fragment.toFloat();
     moveIfPossibleVertical(angleToSteps(verticalAngle));
     //stepperV.move(angleToSteps(verticalAngle));
     return;
