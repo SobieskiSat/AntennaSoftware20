@@ -35,7 +35,7 @@ void duplex_loop()
       {
         decodePacket();                                     // Updates received variables from packet
         SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
-                          "Pt" + String(temperature, 1) +   // format is like: x012345X
+                          "Pt" + String(temperature, 3) +   // format is like: x012345X
                           "Tn" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
                           "Ne" + String(longitude, 7) +     // eg. p1023.97P sends pressure
                           "Ea" + String(altitude, 2) +
@@ -59,11 +59,11 @@ void duplex_loop()
       else { ; } // (Maybe to implement) Sends transmitted data to PC
       transmitting = false;
 
-      SerialUSB.println("Packet number:" + String(packetNumber));
+      //SerialUSB.println("Packet number:" + String(packetNumber));
 
       if (packetNumber == incoming_count-1)  // If packet number (last byte of packet) is equal to count of incoming packets
       {
-        SerialUSB.println("hello boys, I'm sending");                                                  // send packet then (satellite will listen for a while)
+        //SerialUSB.println("hello boys, I'm sending");                                                  // send packet then (satellite will listen for a while)
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
         getSerial();                                          // Receive data from Serial to be sent to satellite
 
@@ -134,7 +134,7 @@ static void decodePacket()    // Converts bytes from received radio package to v
 
     operationModeFB = radio.rxBuffer[21];  // 21
     packetNumber = radio.rxBuffer[22];    // 22
-    SerialUSB.println("packetNumber: " + String(packetNumber));
+    //SerialUSB.println("packetNumber: " + String(packetNumber));
   }
 }
 
