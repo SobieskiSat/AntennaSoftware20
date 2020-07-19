@@ -46,8 +46,8 @@ void duplex_loop()
                           "Ro" + String(operationModeFB) +
                           "Os" + String(smallSPS, 2) +         //approximation to be corrected
                           "Sb" + String(bigSPS, 2) +
-                          "Bv" + String(stepperV.currentPosition()) +
-                          "Vh" + String(stepperH.currentPosition()) +
+                          "Bv" + String(stepsToAngle(stepperV.currentPosition())) +
+                          "Vh" + String(stepsToAngle(stepperH.currentPosition()) - HORIZONTA_CALIBRATION_OFFSET) +
                           "H>");
 
         //sets a new position after a new packet is received

@@ -40,6 +40,13 @@ int angleToSteps(float angle){
 
 ////////////////////////////////////////////////////////////////////////////////
 
+//Returns the amount of steps to be executed in order to move the rotor a given angles
+float stepsToAngle(int steps){
+  return (float)steps/microStepRate/400/127*13*360;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 // checks if the ordered movement doesn't exceed limitations in vertical axis
 // it will make a movement if the target position doesn't exceed limit
 void moveIfPossibleVertical(int movement){

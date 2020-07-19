@@ -22,4 +22,6 @@
 #define LIMIT_UP 90
 #define LIMIT_DOWN -30
 
+#define HORIZONTA_CALIBRATION_OFFSET 180
+
 #endif
