@@ -34,21 +34,21 @@ void duplex_loop()
       if (!transmitting && radio.rxDone)                    // Prints data to PC but only when wans't transmitting during previous routine
       {
         decodePacket();                                     // Updates received variables from packet
-        SerialUSB.println("p" + String(pressure, 2) +       // Prints received values via Serial to PC
-                          "Pt" + String(temperature, 3) +   // format is like: x012345X
-                          "Tn" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
-                          "Ne" + String(longitude, 7) +     // eg. p1023.97P sends pressure
-                          "Ea" + String(altitude, 2) +
-                          "Az" + String(yaw, 1) +
-                          "Zy" + String(pitch, 1) +
-                          "Yx" + String(roll, 1) +
-                          "Xr" + String(radio.rssi) +
-                          "Ro" + String(operationModeFB) +
-                          "Os" + String(smallSPS, 2) +         //approximation to be corrected
-                          "Sb" + String(bigSPS, 2) +
-                          "Bv" + String(stepperV.currentPosition()) +
-                          "Vh" + String(stepperH.currentPosition()) +
-                          "H");
+        SerialUSB.println("<p" + String(pressure, 2) +       // Prints received values via Serial to PC
+                          "P><t" + String(temperature, 3) +   // format is like: x012345X
+                          "T><n" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
+                          "N><e" + String(longitude, 7) +     // eg. p1023.97P sends pressure
+                          "E><a" + String(altitude, 2) +
+                          "A><z" + String(yaw, 1) +
+                          "Z><y" + String(pitch, 1) +
+                          "Y><x" + String(roll, 1) +
+                          "X><r" + String(radio.rssi) +
+                          "R><o" + String(operationModeFB) +
+                          "O><s" + String(smallSPS, 2) +         //approximation to be corrected
+                          "S><b" + String(bigSPS, 2) +
+                          "B><v" + String(stepperV.currentPosition()) +
+                          "V><h" + String(stepperH.currentPosition()) +
+                          "H>");
 
         //sets a new position after a new packet is received
         stepperH.moveTo(angleToSteps(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
