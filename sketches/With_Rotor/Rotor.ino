@@ -23,7 +23,7 @@ void rotorInit(){
   stepperH.enableOutputs();
 
   stepperV.setCurrentPosition(0);
-  stepperH.setCurrentPosition(angleToSteps(180));
+  stepperH.setCurrentPosition(angleToSteps(HORIZONTAL_CALIBRATION_OFFSET));
 
   limitUp = angleToSteps(LIMIT_UP);     //limits in vertical movement in steps
   limitDown = angleToSteps(LIMIT_DOWN);
@@ -154,5 +154,12 @@ long double distance(long double lat1, long double long1,
 }
 
 float RotorGPSVerticalAngle(){
-  return (float)((atan(altFromPressure() / distance(latitude, longitude, rotor_lat, rotor_lon)))/M_PI*180);
+//  long double dist = distance(latitude, longitude, rotor_lat, rotor_lon);
+//    if (dist==0)
+//      return 60;
+//    else
+//      return (float)((atan(altitudeFromPressure / dist))/M_PI*180);
+
+    return (float)((atan(altFromPressure() / distance(latitude, longitude, rotor_lat, rotor_lon)))/M_PI*180);
+
 }

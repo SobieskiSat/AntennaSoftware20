@@ -6,8 +6,9 @@
 // reads data from buffers and sends them for further processing, if the packet is complete
 void getSerial()
 {
+  unsigned long serialStart = millis();
   char incoming;
-  while (SerialUSB.available() > 0)                         // If there are bytes waiting to be read from Serial
+  while (SerialUSB.available() > 0 && millis() - serialStart < 200)                         // If there are bytes waiting to be read from Serial
   {
     incoming = SerialUSB.read();                            // Get one character
     if (readingUSB_packet) serialUSB_packet += incoming;    // Append character to packet
@@ -23,8 +24,8 @@ void getSerial()
       parseSerial(serialUSB_packet);   //parses serial data immidiately when one packet is received
     }
   }
-
-  while (Serial.available() > 0)                            // If there are bytes waiting to be read from Serial
+  serialStart = millis();
+  while (Serial.available() > 0 && millis() - serialStart < 200)                            // If there are bytes waiting to be read from Serial
   {
     digitalWrite(LED_BUILTIN, HIGH);
     incoming = Serial.read();                               // Get one character
@@ -116,7 +117,41 @@ void parseSerial(String serial_packet_choice)
   if (fragment != BAD) {altitudeTarget = fragment.toFloat(); return;}
 
   //moveToIfPossible(angleToSteps(bearing(latitude, longitude, rotor_lat, rotor_lon)));
+/*
+  fragment = cutFragment('x', 'X', serial_packet_choice);
+  if (fragment != BAD) {
+      latitude = fragment.toFloat();
+     //stepperH.moveTo(angleToSteps(horizontalAngle));
+     //return;
+     //horizontalAngle = 0;
+     //SerialUSB.println("Rotor H: " + String(verticalAngle));
+  }
 
+  fragment = cutFragment('y', 'Y', serial_packet_choice);
+  if (fragment != BAD) {
+      longitude = fragment.toFloat();
+     //stepperH.moveTo(angleToSteps(horizontalAngle));
+     //return;
+     //horizontalAngle = 0;
+     //SerialUSB.println("Rotor H: " + String(verticalAngle));
+  }
+
+  fragment = cutFragment('z', 'Z', serial_packet_choice);
+  if (fragment != BAD) {altitude = fragment.toFloat();
+  }
+*/
+  /*//sets a new position after a new packet is received
+  stepperH.moveTo(angleToSteps(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
+  moveToIfPossibleVertical(angleToSteps(RotorGPSVerticalAngle()));
+  SerialUSB.println("Bearing" + String(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
+
+  if(millis() - lastRotorRefresh >= ROTOR_REFRESH_TIME){
+    lastRotorRefresh = millis();
+    stepperH.moveTo(angleToSteps(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
+    moveToIfPossibleVertical(angleToSteps(RotorGPSVerticalAngle()));
+    SerialUSB.println("Bearing" + String(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
+  }
+*/
   fragment = "";
 }
 

@@ -9,9 +9,13 @@
 #include <AccelStepper.h>
 #include "rotor_definitions.h"
 
+#define DATA_SERIAL_MILLIS 1000
+
 #define BAD "@" //char or string to be returned, if a serial message is invalid
 //replaced "bad", because it's shorter and speeds up parsing process
 //We can possibly delete checking for presence of '<' and '>' characters, since they are not included
+
+long previousSerialMillis = 0;
 
 bool led_state = true;      // Used for blinking when packet received
 
@@ -47,17 +51,17 @@ bool rotorCalibrated = false; // true if the positive calibration feedback
                               // has been received from the remote
 
 // Position of antenna rotor
-// Are sent from PC in setup phase
-float rotor_lat = 50.053530;  //in degrees
-float rotor_lon = 19.935201;  //in degrees
-float rotor_alt = 261.0;      //in meters
+// Are sent from PC in setup phase      Everything is in Leszno center
+float rotor_lat = 51.8335479;  //in degrees
+float rotor_lon = 16.5317483;  //in degrees
+float rotor_alt = 69.0;      //in meters, in Leszno
 
 // Variables limiting rotor's vertical movements in software
 int limitUp;
 int limitDown;
 
 // Received variables
-float pressure;
+float pressure = 1004.4; //in Leszno pressure
 float temperature;
 float latitude;
 float longitude;
@@ -70,10 +74,12 @@ float smallSPS;
 float bigSPS;
 uint8_t operationModeFB;  // FB - feedback
 
+float altitudeFromPressure; //for starters CHANGE!!!
+
 
 //float presssBMP = 985; // was needed for tests
                       //might be used for altitude for rotor
-
+long lastRotorRefresh = 0;
 
 //creates an object of AccelStepper class for each of the rotors
 AccelStepper stepperV(AccelStepper::DRIVER, STEPPERV_STEP_PIN, STEPPERV_DIR_PIN);   // stepper for vertical movement

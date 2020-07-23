@@ -33,7 +33,10 @@ void duplex_loop()
 
       if (!transmitting && radio.rxDone)                    // Prints data to PC but only when wans't transmitting during previous routine
       {
-        decodePacket();                                     // Updates received variables from packet
+
+        decodePacket();
+        
+        if(millis() - previousSerialMillis > DATA_SERIAL_MILLIS){                                     // Updates received variables from packet
         SerialUSB.println("<p" + String(pressure, 2) +       // Prints received values via Serial to PC
                           "Pt" + String(temperature, 3) +   // format is like: x012345X
                           "Tn" + String(latitude, 7) +      // 'x' and 'X' are bounds for value
@@ -47,12 +50,18 @@ void duplex_loop()
                           "Os" + String(smallSPS, 2) +         //approximation to be corrected
                           "Sb" + String(bigSPS, 2) +
                           "Bv" + String(stepsToAngle(stepperV.currentPosition())) +
-                          "Vh" + String(stepsToAngle(stepperH.currentPosition()) - HORIZONTA_CALIBRATION_OFFSET) +
+                          "Vh" + String(stepsToAngle(stepperH.currentPosition()) - HORIZONTAL_CALIBRATION_OFFSET) +
                           "H>");
+          previousSerialMillis = millis();
+          }
+
 
         //sets a new position after a new packet is received
-        stepperH.moveTo(angleToSteps(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
-        moveToIfPossibleVertical(angleToSteps(RotorGPSVerticalAngle()));
+        if(millis() - lastRotorRefresh >= ROTOR_REFRESH_TIME){
+          lastRotorRefresh = millis();
+          stepperH.moveTo(angleToSteps(RotorGPSHorizontalAngle(latitude, longitude, rotor_lat, rotor_lon)));
+          moveToIfPossibleVertical(angleToSteps(RotorGPSVerticalAngle()));
+        }
 
         radio.rxDone = false;
       }
@@ -65,7 +74,7 @@ void duplex_loop()
       {
         //SerialUSB.println("hello boys, I'm sending");                                                  // send packet then (satellite will listen for a while)
         transmitting = true;                                  // (counts must be configured equal on both radios for duplex to work)
-        getSerial();                                          // Receive data from Serial to be sent to satellite
+        //getSerial();                                          // Receive data from Serial to be sent to satellite
 
         preparePacket();
         //delay(100);
@@ -135,6 +144,8 @@ static void decodePacket()    // Converts bytes from received radio package to v
     operationModeFB = radio.rxBuffer[21];  // 21
     packetNumber = radio.rxBuffer[22];    // 22
     //SerialUSB.println("packetNumber: " + String(packetNumber));
+
+    altitudeFromPressure = altFromPressure();
   }
 }
 
